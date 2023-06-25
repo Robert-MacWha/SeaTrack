@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Filecoin to Polygon Bridge</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px;
+    }
+
+    #status {
+      margin-top: 20px;
+    }
+
+    #status.error {
+      color: red;
+    }
+
+    #status.success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Filecoin to Polygon Bridge</h1>
+
+  <label for="file">Select a file to upload (1GB max):</label>
+  <input type="file" id="file" accept=".txt" />
+
+  <label for="userAddress">User Address:</label>
+  <input type="text" id="userAddress" />
+
+  <button id="uploadButton" disabled>Upload to Filecoin & Send CID to Polygon</button>
+
+  <div id="status"></div>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.3.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
