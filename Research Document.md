@@ -71,7 +71,20 @@ Currently, a few commonly raised themes are[^11] :
 3. Ensuring the integrity of in-database data is vital
 
 ## Solution
-[[Fish Fraud Solution]]
+### Summary
+Build a system that tags fish digitally.  An NFT is created when the fish is caught and entered into the system.  It's verified by a trusted entity once they can make sure it's the right species, and from then whenever something happens to the fish, that same thing happens to the NFT.  Information on the fish is stored on-chain, as is the process it's been through and the changes / processing steps that have been taken.
+> Could totally use Worldcoin for this - make sure that the fish is tied to an individual's identity at each step.  Makes detecting fraud rather easier, although might not be ideal for privacy?
+
+Problems this would solve:
+- It is more difficult to have illegibly caught fish enter the market.  Instead of just a sticker, you also need to mint the NFT and have it verified by someone.  This means that unknown operations will not be able to stay hidden.
+- It makes it harder to increase the weight of a fish.  Because the weight will be recorded on-chain, rules can be implemented that disallow changes if they affect the weight of the fish too drastically (IE, cutting up the fish can't make it heavier, so the chain shouldn't let that happen)
+- Stopping mislabeling fish.  Because the number of each species is tracked, you can't just make fish magically appear or disappear.  This means if you wanted to pretend that a lower-grade fish was connected to a higher-grade NFT, you wouldn't also be able to present the original high-grade fish with that high-grade NFT.  
+	- There are still some instances where you'd be able to mislabel things, IE if the original higher grade fish was damaged or lost, then a lower grade one could safely take its place.
+- All of the information is on-chain, and thus applications could easily keep track of it & present it to the users in a friendly, easily understandable manner.
+
+### Hackathon Implementation
+#### Core Idea
+Make a web app template that lets you create, modify, and track a fish during the "supply chain."  The application should let you create a new fish, track the transactions as they are made (sales and processing steps) and trace the data on the fish.  The app should use QR codes for identification
 
 # References
 [^1]: The Guardian: Seafood fraud happening on a vast scale: https://www.theguardian.com/environment/2021/mar/15/revealed-seafood-happening-on-a-vast-global-scale
