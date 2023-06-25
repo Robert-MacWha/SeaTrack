@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+import {ByteHasher} from "./lib/ByteHasher.sol";
 import {IWorldID} from "./interfaces/IWorldID.sol";
 
 contract SeaTrack {
+    using ByteHasher for bytes;
+
     struct User {
         uint role;
         bool local_admin;
@@ -16,9 +19,15 @@ contract SeaTrack {
         bool verified;
     }
 
+    IWorldID public worldId;
+
+    constructor(IWorldID _worldId) {
+        worldId = _worldId;
+    }
+
     mapping(address => User) public users;
 
-    modifier onlyAdminOrUser() {
+    modifier onlyAdminOrUser(address user) {
         require(users[msg.sender].global_admin || users[msg.sender].local_admin || msg.sender == user, "Not authorized");
         _;
     }
@@ -58,16 +67,34 @@ contract SeaTrack {
         _;
     }
 
-    function createUser(uint role, IWorldID worldcoin_id) public onlyVerified onlyAdmin onlyNotDisabled {
+    function createUser(uint role, IWorldID worldcoin_id) public onlyVerified onlyAdmin onlyNotDisabled(msg.sender) {
         users[address(worldcoin_id)] = User(role, false, false, worldcoin_id, new address[](0), new bytes[](0), IWorldID(msg.sender), false, false);
     }
 
-    function createAdmin(uint role, IWorldID worldcoin_id, bool global) public onlyVerified onlyGlobalAdmin {
+    function createAdmin(uint role, IWorldID worldcoin_id, bool global) public onlyVerified onlyGlobalAdmin onlyNotDisabled(msg.sender) {
         users[address(worldcoin_id)] = User(role, !global, global, worldcoin_id, new address[](0), new bytes[](0), IWorldID(msg.sender), false, false);
     }
 
-    function verify(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
-        require(worldId.verifyProof(root, 1, abi.encodePacked(signal), nullifierHash, 1, proof), "Verification failed");
+    function verify(
+        address signal,
+        uint256 root,
+        uint256 nullifierHash,
+        uint256[8] calldata proof
+    ) public {
+        require(!users[msg.sender].verified, "User already verified");
+        
+        // Convert signal from address to uint256 using ByteHasher
+        uint256 signalAsUint = abi.encodePacked(signal).hashToField();
+        
+        worldId.verifyProof(
+            root,
+            1,
+            signalAsUint,
+            nullifierHash,
+            1,
+            proof
+        );
+        
         users[msg.sender].verified = true;
     }
 
@@ -84,20 +111,36 @@ contract SeaTrack {
         users[user].disabled = false;
     }
 
-    function addCID(address user, bytes memory cid) public onlyVerified onlyApprovedAddress(user) onlyNotDisabled {
+    function addCIDApproved(address user, bytes memory cid) public onlyVerified onlyApprovedAddress(user) onlyNotDisabled(user) {
         users[user].approved_cids.push(cid);
     }
 
-    function addAddress(address user, address addr) public onlyVerified onlyAdminOrUser onlyNotDisabled(user) {
-        users[user].approved_addresses.push(addr);
+    function addCID(address user, bytes memory cid) public onlyVerified onlyAdminOrUser(user) onlyNotDisabled(user) {
+        if (users[user].local_admin) {
+            require(users[user].admin == users[msg.sender].worldcoin_id, "Local admins cannot edit users they did not create");
+        }
+
+        users[user].approved_cids.push(cid);
     }
 
-    function removeAddress(address addr) public onlyVerified onlyAdminOrUser onlyNotDisabled(user) {
+    function addAddress(address user, address addr) public onlyVerified onlyAdminOrUser(user) onlyNotDisabled(msg.sender) {
+        if (users[user].local_admin) {
+            require(users[user].admin == users[msg.sender].worldcoin_id, "Local admins cannot edit users they did not create");
+        }
+        
+        users[msg.sender].approved_addresses.push(addr);
+    }
+
+    function removeAddress(address user, address addr) public onlyVerified onlyAdminOrUser(user) onlyNotDisabled(msg.sender) {
+        if (users[user].local_admin) {
+            require(users[user].admin == users[msg.sender].worldcoin_id, "Local admins cannot edit users they did not create");
+        }
+
         uint index;
         bool found = false;
 
-        for (uint i = 0; i < users[message.sender].approved_addresses.length; i++) {
-            if (users[message.sender].approved_addresses[i] == addr) {
+        for (uint i = 0; i < users[msg.sender].approved_addresses.length; i++) {
+            if (users[msg.sender].approved_addresses[i] == addr) {
                 index = i;
                 found = true;
                 break;
@@ -106,16 +149,16 @@ contract SeaTrack {
 
         require(found, "Address not found");
 
-        for (uint i = index; i < users[message.sender].approved_addresses.length - 1; i++) {
-            users[message.sender].approved_addresses[i] = users[message.sender].approved_addresses[i + 1];
+        for (uint i = index; i < users[msg.sender].approved_addresses.length - 1; i++) {
+            users[msg.sender].approved_addresses[i] = users[msg.sender].approved_addresses[i + 1];
         }
 
-        users[user].approved_addresses.pop();
+        users[msg.sender].approved_addresses.pop();
     }
 
     function editUser(address user, uint role, IWorldID worldcoin_id) public onlyVerified onlyAdmin onlyNotDisabled(user) {
         if (users[user].local_admin) {
-            require(users[user].admin == users[messager.sender].worldcoin_id, "Local admins cannot edit users they did not create");
+            require(users[user].admin == users[msg.sender].worldcoin_id, "Local admins cannot edit users they did not create");
         }
 
         User storage u = users[user];
